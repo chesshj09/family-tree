@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>가계도 메이커</title>
+<style>
+:root{--panel:#fff;--ac:#d9577b;--ac2:#fbe9ef;--bg:#f4f2ef;--line:#e6e2dc;--tx:#26262b;--mu:#8b8b94}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;font-family:'Pretendard','Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo','Nanum Gothic',sans-serif;color:var(--tx);background:var(--bg);display:flex;flex-direction:column;font-size:14px}
+button,select,input,textarea{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:17px;margin:0 auto 0 0;letter-spacing:-.3px}
+.inline{display:flex;align-items:center;gap:6px;color:var(--mu);font-size:13px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px;cursor:pointer;transition:.12s}
+.btn:hover{border-color:#cfc9c0;background:#faf9f7}
+.btn.primary{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+.btn.primary:hover{filter:brightness(.95)}
+.btn.sm{padding:4px 9px;font-size:12.5px;border-radius:7px}
+.btn.wide{width:100%;margin-top:8px}
+.btn.danger{color:#c0392b;border-color:#f0c9c4}
+.btn.danger:hover{background:#fdf0ee}
+select,input[type=text],textarea,input:not([type]){border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--panel);width:100%}
+textarea{resize:vertical}
+.app{flex:1;display:flex;min-height:0}
+aside{width:390px;max-width:100%;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tab{flex:1;padding:11px 0;border:0;background:none;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent}
+.tab.on{color:var(--ac);border-bottom-color:var(--ac);font-weight:600}
+.pane{overflow:auto;padding:14px;flex:1}
+.sec-h{font-weight:700;margin:2px 0 8px}
+.sec-h small{font-weight:400;color:var(--mu);margin-left:6px;font-size:11.5px}
+.muted{color:var(--mu);font-size:12.5px;line-height:1.55}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+#list{display:flex;flex-direction:column;gap:4px;max-height:210px;overflow:auto;padding-right:2px}
+.item{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--panel)}
+.item.sel{border-color:var(--ac);background:var(--ac2)}
+.item .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.item .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .nm small{color:var(--mu);margin-left:6px}
+.item .mv{border:0;background:none;cursor:pointer;color:var(--mu);padding:2px 5px;border-radius:5px}
+.item .mv:hover{background:#0001}
+label.f{display:block;margin:10px 0 0;font-size:12.5px;color:var(--mu)}
+label.f>input,label.f>textarea,label.f>select{margin-top:4px;color:var(--tx);font-size:14px}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tones{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}
+.tones label{display:flex;align-items:center;gap:5px;border:1px solid var(--line);padding:4px 9px;border-radius:99px;cursor:pointer;font-size:13px;color:var(--tx)}
+.tones input{display:none}
+.tones input:checked+span{font-weight:700}
+.tones label:has(input:checked){border-color:var(--ac);background:var(--ac2)}
+.tones i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tones input[type=color]{display:inline-block;width:28px;height:24px;padding:0;border:1px solid var(--line);border-radius:6px;background:none}
+.photo{display:flex;align-items:center;gap:8px;margin-top:6px}
+.photo img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+.rel{border:1px solid var(--line);border-radius:9px;padding:8px;margin-top:8px;display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center}
+.rel input{grid-column:1/3}
+.chk-line{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:13.5px}
+.chk-line input{width:auto}
+.srow{display:grid;grid-template-columns:104px 1fr 44px;gap:8px;align-items:center;margin:8px 0;font-size:13px}
+.srow input[type=range]{width:100%;accent-color:var(--ac)}
+.srow input[type=color]{width:40px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px}
+.srow span.v{color:var(--mu);font-size:12px;text-align:right}
+.srow.full{grid-template-columns:104px 1fr}
+main{flex:1;display:flex;flex-direction:column;min-width:0}
+.bar{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar .sp{flex:1}
+#zv{min-width:48px;text-align:center;color:var(--mu);font-size:13px}
+#wrap{flex:1;overflow:auto;padding:20px;background:#eceae6}
+#host{display:inline-block;background:var(--panel);box-shadow:0 2px 18px #0002;line-height:0}
+#host.chk{background:conic-gradient(#e9e9e9 25%,#fff 0 50%,#e9e9e9 0 75%,#fff 0) 0 0/16px 16px}
+#host [data-pid]{cursor:pointer}
+#host .empty{padding:60px 80px;line-height:1.6;color:var(--mu);font-size:14px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#26262bee;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:9;max-width:90vw}
+#toast.on{opacity:1}
+@media(max-width:860px){.app{flex-direction:column}aside{width:100%;height:52%;border-right:0;border-bottom:1px solid var(--line)}}
+
+body.goth{--bg:#0d070a;--panel:#1a1015;--line:#3b2531;--tx:#eadfd2;--mu:#a3918b;--ac:#b8324e;--ac2:#2d1621;color-scheme:dark;
+  font-family:'Noto Serif KR','Noto Serif CJK KR','Nanum Myeongjo','Batang','AppleMyungjo',serif}
+body.goth #wrap{background:#080406}
+body.goth .btn:hover{background:#26151d;border-color:#5a3544}
+body.goth .btn.primary{background:#8e2237;border-color:#b8324e}
+body.goth .btn.danger{border-color:#5c2430;color:#e0707f}
+body.goth .btn.danger:hover{background:#2a1218}
+body.goth header h1{color:#d9b878;letter-spacing:1px}
+body.goth .tab.on{color:#d9b878;border-bottom-color:#d9b878}
+body.goth .item.sel{border-color:#b8324e}
+body.goth #host{box-shadow:0 0 0 1px #3b2531,0 6px 40px #000a}
+body.goth .srow input[type=range]{accent-color:#b8324e}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌳 가계도 메이커</h1>
+  <button class="btn" id="btnTheme">🦇 고딕 모드</button>
+  <label class="inline">PNG 해상도
+    <select id="scale" style="width:auto">
+      <option value="1">1배 (화면 크기)</option>
+      <option value="2">2배</option>
+      <option value="3">3배</option>
+      <option value="4" selected>4배 (고화질)</option>
+      <option value="6">6배</option>
+      <option value="8">8배 (초고화질)</option>
+    </select>
+  </label>
+  <button class="btn primary" id="btnPng">PNG 저장</button>
+  <button class="btn" id="btnSvg">SVG 저장</button>
+</header>
+
+<div class="app">
+  <aside>
+    <div class="tabs">
+      <button class="tab on" data-tab="people">인물</button>
+      <button class="tab" data-tab="style">스타일</button>
+      <button class="tab" data-tab="file">저장·도움말</button>
+    </div>
+
+    <div class="pane" id="pane-people">
+      <div class="sec-h">인물 목록<small>위→아래 순서 = 형제·부부의 왼→오 배치 순서</small></div>
+      <div id="list"></div>
+      <button class="btn wide" id="btnAdd">+ 인물 추가</button>
+      <hr>
+      <div id="editor"></div>
+    </div>
+
+    <div class="pane" id="pane-style" hidden></div>
+
+    <div class="pane" id="pane-file" hidden>
+      <div class="sec-h">저장 / 불러오기</div>
+      <div class="muted" style="margin-bottom:8px">작업 내용은 이 브라우저에 자동 저장돼요. 다른 기기로 옮기거나 백업하려면 JSON 파일로 저장해 두세요.</div>
+      <div class="quick">
+        <button class="btn" id="btnJson">JSON 저장</button>
+        <button class="btn" id="btnLoad">JSON 불러오기</button>
+      </div>
+      <hr>
+      <div class="quick">
+        <button class="btn" id="btnDemo">예시 불러오기</button>
+        <button class="btn danger" id="btnClear">모두 지우고 새로 시작</button>
+      </div>
+      <hr>
+      <div class="sec-h">사용 팁</div>
+      <div class="muted">
+        · <b>+ 자녀 / + 배우자 / + 부모 / + 형제자매</b> 버튼으로 빠르게 늘려 가면 편해요.<br>
+        · <b>부모</b>는 한 명만 골라도 되고, 한 명만 고르면 그 한 명 아래로만 연결돼요.<br>
+        · 부부 관계는 <b>결혼(이중선) · 이혼(회색 이중선+사선) · 연인/동거(점선)</b>으로 구분돼요. 관계 옆에 결혼일 같은 글자도 적을 수 있어요.<br>
+        · 부모를 둘 다 지정했는데 부부 관계가 없으면 점선(연인/동거)으로 자동 연결돼요.<br>
+        · 재혼·여러 번 결혼도 배우자를 여러 명 추가하면 돼요.<br>
+        · 왼→오 순서가 마음에 안 들면 인물 목록의 ▲▼로 순서를 바꿔 주세요. (형제는 목록 순서대로 왼쪽부터, 부부는 먼저 있는 사람이 왼쪽)<br>
+        · 오른쪽 그림에서 카드를 클릭하면 바로 그 인물을 편집할 수 있어요.<br>
+        · 사진은 가운데를 기준으로 정사각형으로 잘려 동그랗게 들어가요.<br>
+        · <b>Ctrl(⌘)+마우스 휠</b>로 화면 확대/축소. PNG는 화면 배율과 상관없이 위에서 고른 해상도로 저장돼요.<br>
+        · 가장 선명한 건 <b>SVG</b>(무한 확대)예요. 인쇄·편집용으로 좋아요.
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="bar">
+      <button class="btn sm" id="zOut">−</button>
+      <span id="zv">100%</span>
+      <button class="btn sm" id="zIn">+</button>
+      <button class="btn sm" id="zFit">화면에 맞춤</button>
+      <span class="sp"></span>
+      <span class="muted" id="sizeInfo"></span>
+    </div>
+    <div id="wrap"><div id="host"></div></div>
+  </main>
+</div>
+
+<input type="file" id="fileJson" accept=".json,application/json" hidden>
+<div id="toast"></div>
+
+<script>
+(()=>{
+'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+const uid=()=>'p'+Math.random().toString(36).slice(2,9);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ───────── 상태 ───────── */
+const KEY='familyTreeMaker.v1';
+const DEF_STYLE={theme:'classic',title:'',cardW:150,hGap:34,vGap:110,fs:1,radius:12,lw:2,
+  cMarry:'#d9577b',cDivorce:'#8b8f98',cPartner:'#9b6fd1',cChild:'#6b7280',
+  font:'sans',fontCustom:'',bg:'#ffffff',transparent:false};
+const FONTS={
+  sans:"'Pretendard','Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo','Nanum Gothic',sans-serif",
+  serif:"'Noto Serif KR','Noto Serif CJK KR','Nanum Myeongjo','Batang','AppleMyungjo',serif"};
+const TONES={classic:{m:'#5b8fd1',f:'#e0709a',x:'#8f86d6'},gothic:{m:'#7088b8',f:'#c2405c',x:'#9576c4'}};
+const TXT={classic:{name:'#26262b',sub:'#6b7280',memo:'#4b5563',title:'#26262b'},gothic:{name:'#f0e4d4',sub:'#b3a290',memo:'#a89a8a',title:'#d9b878'}};
+const GOLD='#d9b878',GOTH_BG='#120a0e';
+const THEME_PRESET={
+  classic:{cMarry:'#d9577b',cDivorce:'#8b8f98',cPartner:'#9b6fd1',cChild:'#6b7280',bg:'#ffffff',font:'sans',radius:12},
+  gothic:{cMarry:'#c0334d',cDivorce:'#8f8590',cPartner:'#9a7bd0',cChild:'#8e7a5a',bg:GOTH_BG,font:'serif',radius:6}};
+let state, sel=null, zoom=1, lastW=1, lastH=1, firstFit=true;
+
+const newPerson=(o={})=>({id:uid(),name:'',sub:'',memo:'',photo:'',tone:'x',color:'#4aa37a',hi:false,p1:'',p2:'',...o});
+function norm(j){
+  return {
+    people:(j.people||[]).map(p=>({...newPerson(),...p,id:p.id||uid()})),
+    couples:(j.couples||[]).map(c=>({a:'',b:'',type:'married',label:'',...c,id:c.id||uid()})),
+    style:{...DEF_STYLE,...(j.style||{})}
+  };
+}
+function demo(){
+  const mk=(name,sub,tone,extra={})=>newPerson({name,sub,tone,...extra});
+  const gf=mk('박원식','1942 ~ 2019','m'), gm=mk('최영자','1945 ~','f');
+  const mgf=mk('김태수','1940 ~','m'), mgm=mk('이정희','1944 ~','f');
+  const dad=mk('박민준','1970 ~','m',{p1:gf.id,p2:gm.id}), aunt=mk('박민지','1973 ~','f',{p1:gf.id,p2:gm.id});
+  const mom=mk('김서연','1972 ~','f',{p1:mgf.id,p2:mgm.id}), mAunt=mk('김서현','1975 ~','f',{p1:mgf.id,p2:mgm.id});
+  const uncle=mk('정우진','1971 ~','m');
+  const me=mk('박지후','2001 ~','m',{p1:dad.id,p2:mom.id,hi:true,memo:'나'});
+  const bro=mk('박지안','2004 ~','f',{p1:dad.id,p2:mom.id});
+  const cz1=mk('정하윤','2005 ~','f',{p1:aunt.id,p2:uncle.id});
+  const cz2=mk('김도윤','2008 ~','m',{p1:mAunt.id,memo:'(한 부모 예시)'});
+  const people=[gf,gm,mgf,mgm,uncle,aunt,dad,mom,mAunt,me,bro,cz1,cz2];
+  const C=(a,b,type,label)=>({id:uid(),a:a.id,b:b.id,type,label});
+  return {people,style:{...DEF_STYLE,title:'우리 가족'},couples:[
+    C(gf,gm,'married','1968.10'),C(mgf,mgm,'married','1970.04'),
+    C(dad,mom,'married','2000.05.20'),C(uncle,aunt,'divorced','2012 이혼')]};
+}
+function load(){
+  try{const j=JSON.parse(localStorage.getItem(KEY));if(j&&Array.isArray(j.people))return norm(j);}catch(e){}
+  return demo();
+}
+let saveT;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{
+  try{localStorage.setItem(KEY,JSON.stringify(state));}
+  catch(e){toast('브라우저 저장 공간이 가득 찼어요. JSON으로 따로 저장해 주세요.');}},300);}
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2800);}
+
+/* ───────── 텍스트 측정 / 줄바꿈 ───────── */
+const mctx=document.createElement('canvas').getContext('2d');
+function measure(t,size,weight,fam){mctx.font=`${weight} ${size}px ${fam}`;return mctx.measureText(t).width;}
+function wrap(text,size,weight,fam,maxW){
+  const out=[];
+  String(text||'').split('\n').forEach(par=>{
+    let line='';
+    for(const ch of Array.from(par)){
+      const test=line+ch;
+      if(line&&measure(test,size,weight,fam)>maxW){
+        const sp=line.lastIndexOf(' ');
+        if(sp>0&&ch!==' '){out.push(line.slice(0,sp));line=line.slice(sp+1)+ch;}
+        else{out.push(line);line=ch===' '?'':ch;}
+      }else line=test;
+    }
+    out.push(line);
+  });
+  return out;
+}
+function fontFamily(st){
+  if(st.font==='serif')return FONTS.serif;
+  if(st.font==='custom'&&st.fontCustom.trim())return `'${st.fontCustom.trim().replace(/['"]/g,'')}',${FONTS.sans}`;
+  return FONTS.sans;
+}
+const LH=1.32;
+function cardInfo(p,st,fam){
+  const fs=+st.fs, inner=+st.cardW-22;
+  const ns=17*fs, ss=12*fs, ms=11.5*fs;
+  const nameL=wrap(p.name,ns,700,fam,inner);
+  const subL=p.sub?wrap(p.sub,ss,400,fam,inner):[];
+  const memoL=p.memo?wrap(p.memo,ms,400,fam,inner):[];
+  const photoD=p.photo?Math.min(76,+st.cardW-44):0;
+  let h=26;
+  if(photoD)h+=photoD+10;
+  h+=nameL.length*ns*LH;
+  if(subL.length)h+=4+subL.length*ss*LH;
+  if(memoL.length)h+=6+memoL.length*ms*LH;
+  return {nameL,subL,memoL,photoD,ns,ss,ms,h:Math.max(h,66)};
+}
+
+/* ───────── 레이아웃 ───────── */
+function layout(S){
+  const st=S.style, W=+st.cardW, G=+st.hGap, fam=fontFamily(st), fs=+st.fs;
+  const people=S.people;
+  if(!people.length)return null;
+  const P={},idx={};
+  people.forEach((p,i)=>{P[p.id]=p;idx[p.id]=i;});
+  const parentsOf=p=>{const a=[];
+    if(P[p.p1]&&p.p1!==p.id)a.push(p.p1);
+    if(P[p.p2]&&p.p2!==p.id&&p.p2!==p.p1)a.push(p.p2);
+    return a;};
+  const relKey=(a,b)=>a<b?a+'|'+b:b+'|'+a;
+
+  /* 관계(명시 + 부모 두 명 자동연결) */
+  const rels=[],seen=new Set();
+  S.couples.forEach(c=>{
+    if(P[c.a]&&P[c.b]&&c.a!==c.b){
+      const k=relKey(c.a,c.b);if(seen.has(k))return;seen.add(k);
+      rels.push({a:c.a,b:c.b,type:c.type,label:c.label||'',key:k});
+    }});
+  people.forEach(p=>{const ps=parentsOf(p);
+    if(ps.length===2){const k=relKey(ps[0],ps[1]);
+      if(!seen.has(k)){seen.add(k);rels.push({a:ps[0],b:ps[1],type:'partner',label:'',key:k,implicit:true});}}});
+
+  /* 클러스터(부부 묶음) */
+  const uf={};people.forEach(p=>uf[p.id]=p.id);
+  const find=x=>{while(uf[x]!==x){uf[x]=uf[uf[x]];x=uf[x];}return x;};
+  rels.forEach(r=>{uf[find(r.a)]=find(r.b);});
+  const groups={};people.forEach(p=>{(groups[find(p.id)]??=[]).push(p.id);});
+  const adj={};people.forEach(p=>adj[p.id]=[]);
+  rels.forEach(r=>{adj[r.a].push(r.b);adj[r.b].push(r.a);});
+  function orderMembers(ids){
+    if(ids.length<=2)return ids.slice().sort((a,b)=>idx[a]-idx[b]);
+    const center=ids.slice().sort((a,b)=>adj[b].length-adj[a].length||idx[a]-idx[b])[0];
+    const nb=adj[center].slice().sort((a,b)=>idx[a]-idx[b]);
+    const h=Math.floor(nb.length/2);
+    const used=new Set([center,...nb]);
+    const rest=ids.filter(i=>!used.has(i)).sort((a,b)=>idx[a]-idx[b]);
+    return [...nb.slice(0,h),center,...nb.slice(h),...rest];
+  }
+  const clusters=[],cOf={};
+  Object.values(groups)
+    .sort((g1,g2)=>Math.min(...g1.map(i=>idx[i]))-Math.min(...g2.map(i=>idx[i])))
+    .forEach(ids=>{
+      const members=orderMembers(ids);
+      const c={id:clusters.length,members,offs:[],w:0,gen:0,x:0,row:0};
+      clusters.push(c);members.forEach(m=>cOf[m]=c);
+    });
+  const relByKey={};rels.forEach(r=>relByKey[r.key]=r);
+  clusters.forEach(c=>{
+    let o=0;
+    c.members.forEach((m,i)=>{
+      c.offs.push(o);
+      if(i<c.members.length-1){
+        const r=relByKey[relKey(m,c.members[i+1])];
+        const g=r?Math.max(66,(r.label?measure(r.label,11*fs,400,fam):0)+28):26;
+        o+=W+g;
+      }else o+=W;
+    });
+    c.w=o;
+  });
+  rels.forEach(r=>{const c=cOf[r.a];r.adj=Math.abs(c.members.indexOf(r.a)-c.members.indexOf(r.b))===1;});
+
+  /* 자녀 그룹(unit) */
+  const units={};
+  people.forEach(p=>{const ps=parentsOf(p);if(!ps.length)return;
+    const k=ps.slice().sort().join('|');
+    (units[k]??={ps:ps.slice().sort(),kids:[]}).kids.push(p.id);});
+  const unitList=Object.values(units);
+  const unitsByParent={};
+  unitList.forEach(u=>u.ps.forEach(p=>(unitsByParent[p]??=[]).push(u)));
+
+  /* 세대 계산 */
+  let guard=clusters.length*4+20,ch=true;
+  while(ch&&guard-->0){ch=false;
+    people.forEach(p=>{const c=cOf[p.id];
+      parentsOf(p).forEach(q=>{const pc=cOf[q];if(pc!==c&&c.gen<pc.gen+1){c.gen=pc.gen+1;ch=true;}});});
+    unitList.forEach(u=>{const m=Math.max(...u.kids.map(k=>cOf[k].gen));
+      u.kids.forEach(k=>{if(cOf[k].gen!==m){cOf[k].gen=m;ch=true;}});});
+  }
+  clusters.forEach(c=>{
+    if(c.members.some(m=>parentsOf(P[m]).length))return;
+    let mg=Infinity;
+    c.members.forEach(m=>(unitsByParent[m]||[]).forEach(u=>u.kids.forEach(k=>{mg=Math.min(mg,cOf[k].gen);})));
+    if(mg<Infinity&&mg-1>c.gen)c.gen=mg-1;
+  });
+  const gens=[...new Set(clusters.map(c=>c.gen))].sort((a,b)=>a-b);
+  clusters.forEach(c=>c.row=gens.indexOf(c.gen));
+  const R=gens.length,rows=Array.from({length:R},()=>[]);
+
+  /* 초기 순서(DFS) */
+  const placed=new Set();
+  (function(){
+    const visit=c=>{if(placed.has(c))return;placed.add(c);rows[c.row].push(c);
+      c.members.forEach(m=>(unitsByParent[m]||[]).forEach(u=>u.kids.forEach(k=>visit(cOf[k]))));};
+    clusters.filter(c=>!c.members.some(m=>parentsOf(P[m]).length)).forEach(visit);
+    clusters.forEach(visit);
+  })();
+  rows.forEach(list=>{let x=0;list.forEach(c=>{c.x=x;x+=c.w+G;});});
+
+  /* 링크(부모 앵커 ↔ 자녀) */
+  const links=[],LK=clusters.map(()=>[]);
+  unitList.forEach(u=>{
+    const pc=cOf[u.ps[0]];
+    const o0=pc.offs[pc.members.indexOf(u.ps[0])];
+    const aoff=u.ps.length===2?(o0+pc.offs[pc.members.indexOf(u.ps[1])]+W)/2:o0+W/2;
+    u.pc=pc;u.aoff=aoff;
+    u.kids.forEach(k=>{const cc=cOf[k];if(cc===pc)return;
+      const cOff=cc.offs[cc.members.indexOf(k)]+W/2;
+      LK[pc.id].push({o:cc,self:aoff,other:cOff});
+      LK[cc.id].push({o:pc,self:cOff,other:aoff});});
+  });
+  const desired=c=>{const L=LK[c.id];if(!L.length)return {d:c.x,wt:.2};
+    let s=0;L.forEach(l=>s+=l.o.x+l.other-l.self);return {d:s/L.length,wt:L.length};};
+  function place(list,ds){
+    let s=0;const t=[],wt=[],so=[];
+    list.forEach(c=>{so.push(s);const e=ds.get(c);t.push(e.d-s);wt.push(e.wt);s+=c.w+G;});
+    const blocks=[];
+    for(let i=0;i<list.length;i++){
+      blocks.push({sum:t[i]*wt[i],w:wt[i],n:1});
+      while(blocks.length>1){
+        const b=blocks[blocks.length-1],a=blocks[blocks.length-2];
+        if(a.sum/a.w<=b.sum/b.w)break;
+        a.sum+=b.sum;a.w+=b.w;a.n+=b.n;blocks.pop();
+      }
+    }
+    let k=0;blocks.forEach(b=>{const v=b.sum/b.w;for(let j=0;j<b.n;j++){list[k].x=v+so[k];k++;}});
+  }
+  function fixSib(list){
+    unitList.forEach(u=>{
+      if(u.kids.length<2)return;
+      const cs=[];u.kids.forEach(k=>{const c=cOf[k];if(list.includes(c)&&!cs.includes(c))cs.push(c);});
+      if(cs.length<2)return;
+      const slots=cs.map(c=>list.indexOf(c)).sort((a,b)=>a-b);
+      cs.forEach((c,i)=>{list[slots[i]]=c;});
+    });
+  }
+  const ITER=90;
+  for(let it=0;it<ITER;it++){
+    const order=[...Array(R).keys()];if(it%2)order.reverse();
+    for(const r of order){
+      const list=rows[r],ds=new Map();
+      list.forEach(c=>ds.set(c,desired(c)));
+      if(it>=10&&it<ITER*.65){list.sort((a,b)=>ds.get(a).d-ds.get(b).d);fixSib(list);}
+      place(list,ds);
+    }
+  }
+  const minX=Math.min(...clusters.map(c=>c.x));
+  clusters.forEach(c=>c.x-=minX);
+
+  /* 카드 좌표 */
+  const info={};people.forEach(p=>info[p.id]=cardInfo(p,st,fam));
+  const rowH=rows.map(list=>Math.max(72,...list.flatMap(c=>c.members.map(m=>info[m].h))));
+  const rowTop=[];let y=0;rowH.forEach(h=>{rowTop.push(y);y+=h+ +st.vGap;});
+  const cards={};
+  clusters.forEach(c=>c.members.forEach((m,i)=>{
+    cards[m]={p:P[m],x:c.x+c.offs[i],y:rowTop[c.row],w:W,h:rowH[c.row],info:info[m]};}));
+  const right=Math.max(...clusters.map(c=>c.x+c.w));
+  return {W,fam,fs,cards,rels,units:unitList,cOf,right,bottom:y-+st.vGap};
+}
+
+/* ───────── SVG 생성 ───────── */
+function tint(hex,a){
+  const n=parseInt((hex||'#888888').replace('#','').padEnd(6,'0').slice(0,6),16);
+  const f=v=>Math.round(v+(255-v)*a);
+  return `rgb(${f(n>>16&255)},${f(n>>8&255)},${f(n&255)})`;
+}
+const strokeOf=p=>{const T=TONES[state.style.theme]||TONES.classic;return p.tone==='c'?(p.color||'#888888'):(T[p.tone]||T.x);};
+function mixDark(hex){
+  const n=parseInt((hex||'#888888').replace('#','').padEnd(6,'0').slice(0,6),16),b=[23,13,18];
+  const f=(v,i)=>Math.round(b[i]+(v-b[i])*.16);
+  return `rgb(${f(n>>16&255,0)},${f(n>>8&255,1)},${f(n&255,2)})`;
+}
+const num=n=>Math.round(n*100)/100;
+
+function buildSVG(opt={}){
+  const L=layout(state);
+  if(!L)return null;
+  const st=state.style,W=L.W,lw=+st.lw,fs=L.fs,M=48;
+  const goth=st.theme==='gothic',TX=TXT[goth?'gothic':'classic'];
+  const title=(st.title||'').trim();
+  const top=M+(title?58:0);
+  const tFS=(goth?28:26)*fs, tW=title?measure(title,tFS,700,L.fam)+(goth?title.length*3+240:0):0;
+  const baseW=Math.ceil(L.right+M*2), width=Math.max(baseW,Math.ceil(tW+M*2)), dx=(width-baseW)/2;
+  const height=Math.ceil(top+L.bottom+M+22);
+  let ow=width,oh=height,sc=1;
+  if(opt.scale){
+    sc=Math.min(opt.scale,16000/width,16000/height,Math.sqrt(120e6/(width*height)));
+    ow=Math.round(width*sc);oh=Math.round(height*sc);
+  }
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${ow}" height="${oh}" viewBox="0 0 ${width} ${height}" font-family="${esc(L.fam)}">`;
+  s+=`<defs><filter id="glow" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`+
+     `<radialGradient id="bgg" cx=".5" cy=".42" r=".8"><stop offset="0" stop-color="#2b121b"/><stop offset=".6" stop-color="#160b10"/><stop offset="1" stop-color="#0a0507"/></radialGradient></defs>`;
+  if(!st.transparent){
+    s+=goth&&st.bg===GOTH_BG?`<rect width="${width}" height="${height}" fill="url(#bgg)"/>`:`<rect width="${width}" height="${height}" fill="${esc(st.bg)}"/>`;
+    if(goth){
+      const dm=(x,y,r)=>`<path d="M${x-r} ${y}L${x} ${y-r}L${x+r} ${y}L${x} ${y+r}Z" fill="${GOLD}" fill-opacity=".8"/>`;
+      s+=`<rect x="14" y="14" width="${width-28}" height="${height-28}" fill="none" stroke="#8e7a5a" stroke-opacity=".6" stroke-width="1.5"/>`+
+         `<rect x="21" y="21" width="${width-42}" height="${height-42}" fill="none" stroke="#8e7a5a" stroke-opacity=".3" stroke-width="1"/>`+
+         dm(14,14,5)+dm(width-14,14,5)+dm(14,height-14,5)+dm(width-14,height-14,5);
+    }
+  }
+  if(title){
+    if(goth){
+      const cx=width/2,ty=M+26,half=(tW-240)/2+22,yy=M+17;
+      s+=`<text x="${cx}" y="${ty}" text-anchor="middle" font-size="${tFS}" font-weight="700" letter-spacing="3" fill="${GOLD}">${esc(title)}</text>`+
+         `<path d="M${cx-half-90} ${yy}H${cx-half}M${cx+half} ${yy}H${cx+half+90}" stroke="${GOLD}" stroke-opacity=".6" stroke-width="1"/>`+
+         [cx-half-96,cx+half+96].map(x=>`<path d="M${x-5} ${yy}L${x} ${yy-5}L${x+5} ${yy}L${x} ${yy+5}Z" fill="${GOLD}" fill-opacity=".8"/>`).join('');
+    }else s+=`<text x="${width/2}" y="${M+24}" text-anchor="middle" font-size="${tFS}" font-weight="700" fill="${TX.title}">${esc(title)}</text>`;
+  }
+  s+=`<g transform="translate(${M+dx},${top})" fill="none" stroke-linecap="round" stroke-linejoin="round">`;
+
+  /* 부부선 */
+  const sep=lw+2.4;
+  L.rels.forEach(r=>{
+    const A=L.cards[r.a],B=L.cards[r.b];if(!A||!B)return;
+    const [l,rt]=A.x<B.x?[A,B]:[B,A];
+    const col=r.type==='divorced'?st.cDivorce:r.type==='partner'?st.cPartner:st.cMarry;
+    if(r.adj){
+      const x1=l.x+W,x2=rt.x,yc=l.y+l.h/2,mx=(x1+x2)/2;
+      if(r.type==='partner'){
+        s+=`<path d="M${num(x1)} ${num(yc)}H${num(x2)}" stroke="${col}" stroke-width="${lw}" stroke-dasharray="${lw*3} ${lw*2.4}"/>`;
+      }else{
+        s+=`<path d="M${num(x1)} ${num(yc-sep/2)}H${num(x2)}M${num(x1)} ${num(yc+sep/2)}H${num(x2)}" stroke="${col}" stroke-width="${lw}"/>`;
+        if(r.type==='divorced')
+          s+=`<path d="M${num(mx-8)} ${num(yc+10)}L${num(mx-2)} ${num(yc-10)}M${num(mx+2)} ${num(yc+10)}L${num(mx+8)} ${num(yc-10)}" stroke="${col}" stroke-width="${lw}"/>`;
+      }
+      if(r.label)s+=`<text x="${num(mx)}" y="${num(yc-16)}" text-anchor="middle" font-size="${11*fs}" fill="${col}" stroke="none">${esc(r.label)}</text>`;
+    }else{
+      const yb=l.y+l.h+15;
+      s+=`<path d="M${num(l.x+W/2)} ${num(l.y+l.h)}V${num(yb)}H${num(rt.x+W/2)}V${num(rt.y+rt.h)}" stroke="${col}" stroke-width="${lw}"${r.type==='partner'?` stroke-dasharray="${lw*3} ${lw*2.4}"`:''}/>`;
+    }
+  });
+
+  /* 부모→자녀선 */
+  const ud=[];
+  L.units.forEach(u=>{
+    const A=L.cards[u.ps[0]];let ax,ay,dot=false;
+    if(u.ps.length===2){
+      const B=L.cards[u.ps[1]];
+      const rel=L.rels.find(r=>(r.a===u.ps[0]&&r.b===u.ps[1])||(r.a===u.ps[1]&&r.b===u.ps[0]));
+      ax=(A.x+B.x)/2+W/2;
+      ay=rel&&rel.adj?A.y+A.h/2:A.y+A.h+15;dot=true;
+    }else{ax=A.x+W/2;ay=A.y+A.h;}
+    const kids=u.kids.map(k=>L.cards[k]).filter(Boolean).map(c=>({x:c.x+W/2,top:c.y}));
+    if(!kids.length)return;
+    const xs=[ax,...kids.map(k=>k.x)];
+    ud.push({ax,ay,dot,kids,minTop:Math.min(...kids.map(k=>k.top)),x0:Math.min(...xs),x1:Math.max(...xs)});
+  });
+  const byTop={};ud.forEach(u=>(byTop[u.minTop]??=[]).push(u));
+  Object.values(byTop).forEach(g=>{
+    g.sort((a,b)=>a.x0-b.x0);const ends=[];
+    g.forEach(u=>{let l=0;while(ends[l]!==undefined&&ends[l]>u.x0-8)l++;ends[l]=u.x1;u.level=l;});
+  });
+  let cl='',dots='';
+  ud.forEach(u=>{
+    let by=u.minTop-28-u.level*12;
+    if(by<u.ay+10)by=(u.ay+u.minTop)/2;
+    if(u.kids.length===1&&Math.abs(u.kids[0].x-u.ax)<.5){
+      cl+=`M${num(u.ax)} ${num(u.ay)}V${num(u.kids[0].top)}`;
+    }else{
+      cl+=`M${num(u.ax)} ${num(u.ay)}V${num(by)}M${num(u.x0)} ${num(by)}H${num(u.x1)}`;
+      u.kids.forEach(k=>{cl+=`M${num(k.x)} ${num(by)}V${num(k.top)}`;});
+    }
+    if(u.dot)dots+=`<circle cx="${num(u.ax)}" cy="${num(u.ay)}" r="${lw+1.6}" fill="${st.cChild}" stroke="none"/>`;
+  });
+  if(cl)s+=`<path d="${cl}" stroke="${st.cChild}" stroke-width="${lw}"/>`;
+  s+=dots;
+
+  /* 카드 */
+  const r=+st.radius;
+  Object.values(L.cards).forEach(c=>{
+    const p=c.p,I=c.info,stroke=strokeOf(p),fill=goth?mixDark(stroke):tint(stroke,.9);
+    s+=`<g data-pid="${p.id}">`;
+    if(goth){
+      const cc=Math.max(5,r*.9),pts=(x,y,w,h,k)=>`${num(x+k)},${num(y)} ${num(x+w-k)},${num(y)} ${num(x+w)},${num(y+k)} ${num(x+w)},${num(y+h-k)} ${num(x+w-k)},${num(y+h)} ${num(x+k)},${num(y+h)} ${num(x)},${num(y+h-k)} ${num(x)},${num(y+k)}`;
+      const dm=(x,y)=>`<path d="M${num(x-5)} ${num(y)}L${num(x)} ${num(y-5)}L${num(x+5)} ${num(y)}L${num(x)} ${num(y+5)}Z" fill="${stroke}" stroke="none"/>`;
+      if(p.hi)s+=`<polygon points="${pts(c.x-5,c.y-5,W+10,c.h+10,cc+3)}" stroke="${GOLD}" stroke-width="2" filter="url(#glow)"/>`;
+      s+=`<polygon points="${pts(c.x,c.y,W,c.h,cc)}" fill="${fill}" stroke="${p.hi?GOLD:stroke}" stroke-width="${p.hi?2.6:1.8}"/>`+
+         `<polygon points="${pts(c.x+4.5,c.y+4.5,W-9,c.h-9,Math.max(2,cc-3))}" stroke="${stroke}" stroke-opacity=".4" stroke-width="1"/>`+
+         dm(c.x+W/2,c.y)+dm(c.x+W/2,c.y+c.h);
+    }else{
+      if(p.hi)s+=`<rect x="${c.x-5}" y="${c.y-5}" width="${W+10}" height="${c.h+10}" rx="${r+4}" stroke="${stroke}" stroke-opacity=".35" stroke-width="3"/>`;
+      s+=`<rect x="${num(c.x)}" y="${num(c.y)}" width="${W}" height="${c.h}" rx="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${p.hi?3:1.8}"/>`;
+    }
+    let cy=c.y+(c.h-I.h)/2+13;
+    if(I.photoD){
+      const pr=I.photoD/2,pcx=c.x+W/2,pcy=cy+pr;
+      s+=`<clipPath id="cl-${p.id}"><circle cx="${num(pcx)}" cy="${num(pcy)}" r="${pr}"/></clipPath>`+
+         `<image xlink:href="${p.photo}" x="${num(pcx-pr)}" y="${num(pcy-pr)}" width="${I.photoD}" height="${I.photoD}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cl-${p.id})"/>`+
+         `<circle cx="${num(pcx)}" cy="${num(pcy)}" r="${pr}" stroke="${stroke}" stroke-width="2.4"/>`;
+      cy+=I.photoD+10;
+    }
+    const tx=(lines,size,weight,color,gapBefore)=>{
+      if(!lines.length)return;cy+=gapBefore;
+      lines.forEach(t=>{
+        s+=`<text x="${num(c.x+W/2)}" y="${num(cy+size*LH/2+size*.35)}" text-anchor="middle" font-size="${num(size)}" font-weight="${weight}" fill="${color}" stroke="none">${esc(t)}</text>`;
+        cy+=size*LH;});
+    };
+    tx(I.nameL,I.ns,700,TX.name,0);
+    tx(I.subL,I.ss,400,TX.sub,4);
+    tx(I.memoL,I.ms,400,TX.memo,6);
+    if(opt.selected===p.id)s+=`<rect x="${c.x-4}" y="${c.y-4}" width="${W+8}" height="${c.h+8}" rx="${r+3}" stroke="#2563eb" stroke-width="2" stroke-dasharray="6 4"/>`;
+    s+='</g>';
+  });
+  s+='</g></svg>';
+  return {svg:s,width,height,ow,oh,scale:sc};
+}
+
+/* ───────── 미리보기 ───────── */
+const host=$('#host'),wrapEl=$('#wrap');
+function renderPreview(){
+  const r=buildSVG({selected:sel});
+  host.classList.toggle('chk',!!state.style.transparent);
+  if(!r){host.innerHTML='<div class="empty">아직 인물이 없어요.<br>왼쪽에서 “+ 인물 추가”를 눌러 시작해 보세요.</div>';$('#sizeInfo').textContent='';return;}
+  host.innerHTML=r.svg;lastW=r.width;lastH=r.height;
+  if(firstFit){firstFit=false;fit();}else applyZoom();
+  $('#sizeInfo').textContent=`원본 ${r.width}×${r.height}px`;
+}
+function applyZoom(){
+  const svg=$('svg',host);
+  if(svg){svg.style.width=lastW*zoom+'px';svg.style.height=lastH*zoom+'px';}
+  $('#zv').textContent=Math.round(zoom*100)+'%';
+}
+function fit(){
+  zoom=Math.max(.1,Math.min(1.5,(wrapEl.clientWidth-50)/lastW,(wrapEl.clientHeight-50)/lastH));
+  applyZoom();
+}
+const setZoom=z=>{zoom=Math.max(.1,Math.min(4,z));applyZoom();};
+$('#zIn').onclick=()=>setZoom(zoom*1.2);
+$('#zOut').onclick=()=>setZoom(zoom/1.2);
+$('#zFit').onclick=fit;
+wrapEl.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();setZoom(zoom*(e.deltaY<0?1.1:1/1.1));}},{passive:false});
+host.addEventListener('click',e=>{const g=e.target.closest('[data-pid]');if(g)select(g.dataset.pid,true);});
+
+/* ───────── 인물 목록 / 편집기 ───────── */
+const cur=()=>state.people.find(p=>p.id===sel);
+function nameOf(p){
+  const base=p.name||'(이름 없음)';
+  const same=state.people.filter(q=>(q.name||'(이름 없음)')===base);
+  return same.length>1?`${base} #${same.indexOf(p)+1}`:base;
+}
+function renderList(){
+  $('#list').innerHTML=state.people.map(p=>`
+    <div class="item${p.id===sel?' sel':''}" data-id="${p.id}">
+      <i class="dot" style="background:${strokeOf(p)}"></i>
+      <div class="nm">${esc(p.name||'(이름 없음)')}<small>${esc(p.sub)}</small></div>
+      <button class="mv" data-mv="-1" title="위로">▲</button><button class="mv" data-mv="1" title="아래로">▼</button>
+    </div>`).join('')||'<div class="muted">인물이 없어요.</div>';
+}
+$('#list').addEventListener('click',e=>{
+  const it=e.target.closest('.item');if(!it)return;
+  const mv=e.target.closest('[data-mv]');
+  if(mv){
+    const a=state.people,i=a.findIndex(p=>p.id===it.dataset.id),j=i+ +mv.dataset.mv;
+    if(j>=0&&j<a.length){[a[i],a[j]]=[a[j],a[i]];changed(true);}
+    return;
+  }
+  select(it.dataset.id);
+});
+function select(id,fromPreview){
+  sel=id;showTab('people');renderList();renderEditor();renderPreview();
+  if(fromPreview){const el=$('#editor');el.scrollIntoView({block:'nearest'});}
+}
+function changed(editor){
+  save();renderList();renderPreview();if(editor)renderEditor();
+}
+function renderEditor(){
+  const p=cur(),el=$('#editor');
+  if(!p){el.innerHTML='<p class="muted">인물을 선택하면 여기서 수정할 수 있어요.</p>';return;}
+  const opts=(v,ex)=>'<option value="">— 없음 —</option>'+state.people.filter(q=>q.id!==ex)
+    .map(q=>`<option value="${q.id}"${q.id===v?' selected':''}>${esc(nameOf(q))}</option>`).join('');
+  const rels=state.couples.filter(c=>c.a===p.id||c.b===p.id);
+  const tone=(v,label,col)=>`<label><input type="radio" name="tone" data-f="tone" value="${v}"${p.tone===v?' checked':''}><i style="background:${col}"></i><span>${label}</span></label>`;
+  el.innerHTML=`
+    <div class="sec-h">선택한 인물 편집</div>
+    <div class="quick">
+      <button class="btn sm" data-act="addChild">+ 자녀</button>
+      <button class="btn sm" data-act="addSpouse">+ 배우자</button>
+      <button class="btn sm" data-act="addParent">+ 부모</button>
+      <button class="btn sm" data-act="addSibling">+ 형제자매</button>
+    </div>
+    <label class="f">이름<input type="text" data-f="name" value="${esc(p.name)}"></label>
+    <label class="f">부제목 (생몰년·생년월일 등)<input type="text" data-f="sub" value="${esc(p.sub)}" placeholder="예) 1965.03.02 ~"></label>
+    <label class="f">메모 (여러 줄 가능)<textarea data-f="memo" rows="3" placeholder="직업, 거주지, 한마디 등">${esc(p.memo)}</textarea></label>
+    <div class="f" style="margin-top:10px">사진
+      <div class="photo">
+        ${p.photo?`<img src="${p.photo}" alt="">`:''}
+        <label class="btn sm" style="cursor:pointer">사진 선택<input type="file" id="photoIn" accept="image/*" hidden></label>
+        ${p.photo?'<button class="btn sm" data-act="rmPhoto">삭제</button>':''}
+      </div>
+    </div>
+    <div class="f" style="margin-top:10px">카드 색
+      <div class="tones">
+        ${tone('m','남','#5b8fd1')}${tone('f','여','#e0709a')}${tone('x','기타','#8f86d6')}${tone('c','직접','#aaa')}
+        <input type="color" id="colorIn" value="${p.color||'#4aa37a'}" title="직접 고른 색">
+      </div>
+    </div>
+    <label class="chk-line"><input type="checkbox" data-f="hi"${p.hi?' checked':''}>이 카드 강조하기 (테두리 굵게)</label>
+    <hr>
+    <div class="sec-h">부모 <small>한 명만 골라도 돼요</small></div>
+    <div class="row2">
+      <select data-f="p1">${opts(p.p1,p.id)}</select>
+      <select data-f="p2">${opts(p.p2,p.id)}</select>
+    </div>
+    <hr>
+    <div class="sec-h">배우자 / 파트너</div>
+    ${rels.map(c=>{
+      const other=c.a===p.id?c.b:c.a;
+      return `<div class="rel" data-rid="${c.id}">
+        <select data-r="other">${opts(other,p.id)}</select>
+        <select data-r="type">
+          <option value="married"${c.type==='married'?' selected':''}>결혼 (이중선)</option>
+          <option value="divorced"${c.type==='divorced'?' selected':''}>이혼 (회색+사선)</option>
+          <option value="partner"${c.type==='partner'?' selected':''}>연인·동거 (점선)</option>
+        </select>
+        <button class="btn sm danger" data-act="delRel" title="관계 삭제">✕</button>
+        <input type="text" data-r="label" value="${esc(c.label)}" placeholder="선 위에 표시할 글자 (예: 2000.05.20 결혼)">
+      </div>`;}).join('')||'<div class="muted">등록된 배우자가 없어요.</div>'}
+    <button class="btn wide" data-act="addRel">+ 기존 인물과 관계 추가</button>
+    <hr>
+    <button class="btn danger wide" data-act="del">이 인물 삭제</button>`;
+}
+const ed=$('#editor');
+ed.addEventListener('input',e=>{
+  const t=e.target,p=cur();if(!p)return;
+  if(t.dataset.f&&(t.type==='text'||t.tagName==='TEXTAREA')){p[t.dataset.f]=t.value;changed(false);}
+  else if(t.dataset.r==='label'){const c=state.couples.find(c=>c.id===t.closest('.rel').dataset.rid);if(c){c.label=t.value;changed(false);}}
+  else if(t.id==='colorIn'){p.color=t.value;p.tone='c';changed(false);
+    const r=ed.querySelector('input[name=tone][value=c]');if(r)r.checked=true;}
+});
+ed.addEventListener('change',async e=>{
+  const t=e.target,p=cur();if(!p)return;
+  if(t.id==='photoIn'&&t.files[0]){
+    try{p.photo=await readPhoto(t.files[0]);changed(true);}catch(err){toast('사진을 읽지 못했어요.');}
+  }else if(t.dataset.f==='tone'){p.tone=t.value;changed(false);}
+  else if(t.dataset.f==='hi'){p.hi=t.checked;changed(false);}
+  else if(t.dataset.f==='p1'||t.dataset.f==='p2'){
+    p[t.dataset.f]=t.value;
+    if(p.p1&&p.p2&&p.p1===p.p2)p[t.dataset.f]='';
+    if(p.p1&&p.p2&&!hasRel(p.p1,p.p2))state.couples.push({id:uid(),a:p.p1,b:p.p2,type:'married',label:''});
+    changed(true);
+  }
+  else if(t.dataset.r==='other'||t.dataset.r==='type'){
+    const c=state.couples.find(c=>c.id===t.closest('.rel').dataset.rid);if(!c)return;
+    if(t.dataset.r==='type')c.type=t.value;
+    else if(c.a===p.id)c.b=t.value;else c.a=t.value;
+    changed(false);
+  }
+});
+const hasRel=(a,b)=>state.couples.some(c=>(c.a===a&&c.b===b)||(c.a===b&&c.b===a));
+function addPerson(o,after){
+  const n=newPerson(o);state.people.push(n);sel=n.id;return n;
+}
+ed.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'),p=cur();if(!b||!p)return;
+  const act=b.dataset.act;
+  if(act==='addChild'){
+    let other='';
+    for(let i=state.couples.length-1;i>=0;i--){const c=state.couples[i];
+      if(c.a!==p.id&&c.b!==p.id)continue;
+      const o=c.a===p.id?c.b:c.a;
+      if(o&&state.people.some(q=>q.id===o)){other=o;break;}}
+    addPerson({name:'자녀',p1:p.id,p2:other});
+  }else if(act==='addSpouse'){
+    const n=addPerson({name:'배우자'});
+    state.couples.push({id:uid(),a:p.id,b:n.id,type:'married',label:''});
+  }else if(act==='addParent'){
+    if(p.p1&&p.p2){toast('이미 부모가 두 분 등록되어 있어요.');return;}
+    const n=addPerson({name:'부모'});
+    if(!p.p1)p.p1=n.id;else p.p2=n.id;
+    if(p.p1&&p.p2&&!hasRel(p.p1,p.p2))state.couples.push({id:uid(),a:p.p1,b:p.p2,type:'married',label:''});
+  }else if(act==='addSibling'){
+    addPerson({name:'형제자매',p1:p.p1,p2:p.p2});
+  }else if(act==='rmPhoto'){p.photo='';}
+  else if(act==='addRel'){state.couples.push({id:uid(),a:p.id,b:'',type:'married',label:''});}
+  else if(act==='delRel'){const id=b.closest('.rel').dataset.rid;state.couples=state.couples.filter(c=>c.id!==id);}
+  else if(act==='del'){
+    if(!confirm(`“${p.name||'(이름 없음)'}” 인물을 삭제할까요?`))return;
+    const i=state.people.indexOf(p);
+    state.people.splice(i,1);
+    state.couples=state.couples.filter(c=>c.a!==p.id&&c.b!==p.id);
+    state.people.forEach(q=>{if(q.p1===p.id)q.p1='';if(q.p2===p.id)q.p2='';});
+    sel=state.people[Math.min(i,state.people.length-1)]?.id||null;
+  }
+  save();renderList();renderEditor();renderPreview();
+  if(act.startsWith('add')&&act!=='addRel'){const n=$('[data-f=name]',ed);if(n){n.focus();n.select();}}
+});
+$('#btnAdd').onclick=()=>{addPerson({name:'새 인물'});save();renderList();renderEditor();renderPreview();const n=$('[data-f=name]',ed);if(n){n.focus();n.select();}};
+
+function readPhoto(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onload=()=>{const im=new Image();
+      im.onload=()=>{
+        const side=Math.min(im.width,im.height),out=Math.min(side,512);
+        const cv=document.createElement('canvas');cv.width=cv.height=out;
+        cv.getContext('2d').drawImage(im,(im.width-side)/2,(im.height-side)/2,side,side,0,0,out,out);
+        res(cv.toDataURL('image/jpeg',.9));};
+      im.onerror=rej;im.src=fr.result;};
+    fr.onerror=rej;fr.readAsDataURL(file);
+  });
+}
+
+/* ───────── 스타일 탭 ───────── */
+const STYLE_UI=[
+  {k:'title',t:'text',l:'제목',ph:'비우면 표시 안 함'},
+  {k:'cardW',t:'range',l:'카드 너비',min:110,max:280,step:2},
+  {k:'fs',t:'range',l:'글자 크기',min:.7,max:1.7,step:.05},
+  {k:'hGap',t:'range',l:'가로 간격',min:10,max:140,step:2},
+  {k:'vGap',t:'range',l:'세로 간격',min:70,max:260,step:2},
+  {k:'radius',t:'range',l:'카드 둥글기',min:0,max:28,step:1},
+  {k:'lw',t:'range',l:'선 굵기',min:1,max:7,step:.5},
+  {k:'cMarry',t:'color',l:'결혼선 색'},
+  {k:'cDivorce',t:'color',l:'이혼선 색'},
+  {k:'cPartner',t:'color',l:'연인·동거선 색'},
+  {k:'cChild',t:'color',l:'부모-자녀선 색'},
+  {k:'font',t:'font',l:'글꼴'},
+  {k:'bg',t:'color',l:'배경색'},
+  {k:'transparent',t:'check',l:'PNG 배경 투명'}
+];
+function renderStylePane(){
+  const s=state.style;
+  $('#pane-style').innerHTML=`<div class="sec-h">스타일</div>`+STYLE_UI.map(u=>{
+    if(u.t==='text')return `<div class="srow full"><label>${u.l}</label><input type="text" data-s="${u.k}" value="${esc(s[u.k])}" placeholder="${u.ph||''}"></div>`;
+    if(u.t==='range')return `<div class="srow"><label>${u.l}</label><input type="range" data-s="${u.k}" min="${u.min}" max="${u.max}" step="${u.step}" value="${s[u.k]}"><span class="v">${s[u.k]}</span></div>`;
+    if(u.t==='color')return `<div class="srow full"><label>${u.l}</label><input type="color" data-s="${u.k}" value="${s[u.k]}"></div>`;
+    if(u.t==='check')return `<div class="srow full"><label>${u.l}</label><input type="checkbox" data-s="${u.k}"${s[u.k]?' checked':''} style="width:auto;justify-self:start"></div>`;
+    return `<div class="srow full"><label>${u.l}</label><div>
+      <select data-s="font"><option value="sans"${s.font==='sans'?' selected':''}>고딕 (기본)</option><option value="serif"${s.font==='serif'?' selected':''}>명조</option><option value="custom"${s.font==='custom'?' selected':''}>직접 입력</option></select>
+      <input type="text" data-s="fontCustom" value="${esc(s.fontCustom)}" placeholder="내 컴퓨터에 설치된 글꼴 이름" style="margin-top:6px"${s.font==='custom'?'':' hidden'}>
+      <div class="muted" style="margin-top:4px">설치된 글꼴만 PNG에 반영돼요.</div></div></div>`;
+  }).join('')+`<hr><button class="btn" id="btnResetStyle">스타일 초기화</button>`;
+}
+$('#pane-style').addEventListener('input',e=>{
+  const t=e.target,k=t.dataset.s;if(!k)return;
+  if(t.type==='checkbox')state.style[k]=t.checked;
+  else if(t.type==='range'){state.style[k]=+t.value;const v=t.parentElement.querySelector('.v');if(v)v.textContent=t.value;}
+  else state.style[k]=t.value;
+  if(k==='font'){$('[data-s=fontCustom]').hidden=t.value!=='custom';}
+  save();renderPreview();
+});
+$('#pane-style').addEventListener('change',e=>{if(e.target.dataset.s==='font'){state.style.font=e.target.value;$('[data-s=fontCustom]').hidden=e.target.value!=='custom';save();renderPreview();}});
+$('#pane-style').addEventListener('click',e=>{
+  if(e.target.id==='btnResetStyle'){const th=state.style.theme;state.style={...DEF_STYLE,...THEME_PRESET[th],theme:th,title:state.style.title};renderStylePane();save();renderPreview();}
+});
+
+/* ───────── 탭 ───────── */
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  ['people','style','file'].forEach(n=>$('#pane-'+n).hidden=n!==t);
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+/* ───────── 내보내기 ───────── */
+function dl(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+const fname=ext=>((state.style.title||'가계도').replace(/[\\/:*?"<>|]/g,'').trim()||'가계도')+'.'+ext;
+$('#btnSvg').onclick=()=>{
+  const r=buildSVG();if(!r){toast('인물이 없어요.');return;}
+  dl(new Blob([r.svg],{type:'image/svg+xml;charset=utf-8'}),fname('svg'));
+};
+$('#btnPng').onclick=async()=>{
+  const want=+$('#scale').value;
+  const r=buildSVG({scale:want});if(!r){toast('인물이 없어요.');return;}
+  const url=URL.createObjectURL(new Blob([r.svg],{type:'image/svg+xml;charset=utf-8'}));
+  try{
+    const img=new Image();
+    await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
+    const cv=document.createElement('canvas');cv.width=r.ow;cv.height=r.oh;
+    const ctx=cv.getContext('2d');ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img,0,0,r.ow,r.oh);
+    const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+    if(!blob)throw new Error('toBlob');
+    dl(blob,fname('png'));
+    toast(r.scale<want-.01?`너무 커서 ${r.scale.toFixed(1)}배로 낮춰 저장했어요 (${r.ow}×${r.oh}px)`:`PNG 저장 완료 (${r.ow}×${r.oh}px)`);
+  }catch(err){toast('PNG 생성에 실패했어요. 해상도를 낮춰 보세요.');}
+  finally{URL.revokeObjectURL(url);}
+};
+$('#btnJson').onclick=()=>dl(new Blob([JSON.stringify(state,null,1)],{type:'application/json'}),fname('json'));
+$('#btnLoad').onclick=()=>$('#fileJson').click();
+$('#fileJson').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const fr=new FileReader();
+  fr.onload=()=>{try{
+    const j=JSON.parse(fr.result);if(!Array.isArray(j.people))throw 0;
+    state=norm(j);sel=state.people[0]?.id||null;renderAll();save();firstFit=true;renderPreview();toast('불러왔어요.');
+  }catch(err){toast('올바른 가계도 JSON 파일이 아니에요.');}};
+  fr.readAsText(f);e.target.value='';
+};
+$('#btnDemo').onclick=()=>{if(confirm('현재 내용이 예시로 바뀌어요. 계속할까요?')){state=demo();sel=null;firstFit=true;renderAll();save();}};
+$('#btnClear').onclick=()=>{if(confirm('모든 내용을 지우고 새로 시작할까요? (되돌릴 수 없어요)')){state={people:[],couples:[],style:{...DEF_STYLE}};sel=null;renderAll();save();}};
+
+function applyTheme(){
+  const g=state.style.theme==='gothic';
+  document.body.classList.toggle('goth',g);
+  $('#btnTheme').textContent=g?'☀️ 기본 모드':'🦇 고딕 모드';
+}
+$('#btnTheme').onclick=()=>{
+  const t=state.style.theme==='gothic'?'classic':'gothic';
+  state.style={...state.style,...THEME_PRESET[t],theme:t};
+  applyTheme();renderList();renderStylePane();save();renderPreview();
+  toast(t==='gothic'?'🦇 고딕 모드로 바꿨어요 (색·글꼴이 고딕 기본값으로 바뀌어요)':'기본 모드로 돌아왔어요');
+};
+function renderAll(){applyTheme();renderList();renderEditor();renderStylePane();renderPreview();}
+state=load();
+sel=state.people[0]?.id||null;
+renderAll();
+window.addEventListener('resize',()=>{});
+window.__dbg={get state(){return state;},buildSVG,layout};
+})();
+</script>
+</body>
+</html>
