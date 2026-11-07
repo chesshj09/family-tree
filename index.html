@@ -147,6 +147,7 @@ body.goth .srow input[type=range]{accent-color:#b8324e}
         · 부부 관계는 <b>결혼(이중선) · 이혼(회색 이중선+사선) · 연인/동거(점선)</b>으로 구분돼요. 관계 옆에 결혼일 같은 글자도 적을 수 있어요.<br>
         · 부모를 둘 다 지정했는데 부부 관계가 없으면 점선(연인/동거)으로 자동 연결돼요.<br>
         · 재혼·여러 번 결혼도 배우자를 여러 명 추가하면 돼요.<br>
+        · 부모를 적고 싶지 않으면 <b>가족관계</b> 칸에서 형제자매(한 줄로 묶임)·사촌·기타 친척(점선)으로 이어 주세요. 부모가 없는 인물에 <b>+ 형제자매</b>를 누르면 자동으로 이렇게 이어져요.<br>
         · 왼→오 순서가 마음에 안 들면 인물 목록의 ▲▼로 순서를 바꿔 주세요. (형제는 목록 순서대로 왼쪽부터, 부부는 먼저 있는 사람이 왼쪽)<br>
         · 오른쪽 그림에서 카드를 클릭하면 바로 그 인물을 편집할 수 있어요.<br>
         · 사진은 가운데를 기준으로 정사각형으로 잘려 동그랗게 들어가요.<br>
@@ -182,7 +183,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 /* ───────── 상태 ───────── */
 const KEY='familyTreeMaker.v1';
 const DEF_STYLE={theme:'classic',title:'',cardW:150,hGap:34,vGap:110,fs:1,radius:12,lw:2,
-  cMarry:'#d9577b',cDivorce:'#8b8f98',cPartner:'#9b6fd1',cChild:'#6b7280',
+  cMarry:'#d9577b',cDivorce:'#8b8f98',cPartner:'#9b6fd1',cChild:'#6b7280',cKin:'#3f9e8f',
   font:'sans',fontCustom:'',bg:'#ffffff',transparent:false};
 const FONTS={
   sans:"'Pretendard','Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo','Nanum Gothic',sans-serif",
@@ -191,8 +192,8 @@ const TONES={classic:{m:'#5b8fd1',f:'#e0709a',x:'#8f86d6'},gothic:{m:'#7088b8',f
 const TXT={classic:{name:'#26262b',sub:'#6b7280',memo:'#4b5563',title:'#26262b'},gothic:{name:'#f0e4d4',sub:'#b3a290',memo:'#a89a8a',title:'#d9b878'}};
 const GOLD='#d9b878',GOTH_BG='#120a0e';
 const THEME_PRESET={
-  classic:{cMarry:'#d9577b',cDivorce:'#8b8f98',cPartner:'#9b6fd1',cChild:'#6b7280',bg:'#ffffff',font:'sans',radius:12},
-  gothic:{cMarry:'#c0334d',cDivorce:'#8f8590',cPartner:'#9a7bd0',cChild:'#8e7a5a',bg:GOTH_BG,font:'serif',radius:6}};
+  classic:{cMarry:'#d9577b',cDivorce:'#8b8f98',cPartner:'#9b6fd1',cChild:'#6b7280',cKin:'#3f9e8f',bg:'#ffffff',font:'sans',radius:12},
+  gothic:{cMarry:'#c0334d',cDivorce:'#8f8590',cPartner:'#9a7bd0',cChild:'#8e7a5a',cKin:'#7f9aa3',bg:GOTH_BG,font:'serif',radius:6}};
 let state, sel=null, zoom=1, lastW=1, lastH=1, firstFit=true;
 
 const newPerson=(o={})=>({id:uid(),name:'',sub:'',memo:'',photo:'',tone:'x',color:'#4aa37a',hi:false,p1:'',p2:'',...o});
@@ -200,6 +201,7 @@ function norm(j){
   return {
     people:(j.people||[]).map(p=>({...newPerson(),...p,id:p.id||uid()})),
     couples:(j.couples||[]).map(c=>({a:'',b:'',type:'married',label:'',...c,id:c.id||uid()})),
+    kin:(j.kin||[]).map(c=>({a:'',b:'',type:'sibling',label:'',...c,id:c.id||uid()})),
     style:{...DEF_STYLE,...(j.style||{})}
   };
 }
@@ -216,7 +218,7 @@ function demo(){
   const cz2=mk('김도윤','2008 ~','m',{p1:mAunt.id,memo:'(한 부모 예시)'});
   const people=[gf,gm,mgf,mgm,uncle,aunt,dad,mom,mAunt,me,bro,cz1,cz2];
   const C=(a,b,type,label)=>({id:uid(),a:a.id,b:b.id,type,label});
-  return {people,style:{...DEF_STYLE,title:'우리 가족'},couples:[
+  return {people,kin:[],style:{...DEF_STYLE,title:'우리 가족'},couples:[
     C(gf,gm,'married','1968.10'),C(mgf,mgm,'married','1970.04'),
     C(dad,mom,'married','2000.05.20'),C(uncle,aunt,'divorced','2012 이혼')]};
 }
@@ -340,6 +342,22 @@ function layout(S){
     const k=ps.slice().sort().join('|');
     (units[k]??={ps:ps.slice().sort(),kids:[]}).kids.push(p.id);});
   const unitList=Object.values(units);
+  /* 가족관계(kin): 형제자매는 부모 없이도 한 묶음으로 */
+  const kinList=(S.kin||[]).filter(k=>P[k.a]&&P[k.b]&&k.a!==k.b);
+  const sf={};people.forEach(p=>sf[p.id]=p.id);
+  const sfind=x=>{while(sf[x]!==x){sf[x]=sf[sf[x]];x=sf[x];}return x;};
+  kinList.filter(k=>k.type==='sibling').forEach(k=>{sf[sfind(k.a)]=sfind(k.b);});
+  const sgroups={};people.forEach(p=>{(sgroups[sfind(p.id)]??=[]).push(p.id);});
+  Object.values(sgroups).filter(g=>g.length>1).forEach(g=>{
+    g.sort((a,b)=>idx[a]-idx[b]);
+    const withP=g.filter(m=>parentsOf(P[m]).length);
+    if(withP.length){
+      const u=units[parentsOf(P[withP[0]]).slice().sort().join('|')];
+      g.filter(m=>!parentsOf(P[m]).length).forEach(m=>{if(!u.kids.includes(m))u.kids.push(m);});
+      u.kids.sort((a,b)=>idx[a]-idx[b]);
+    }else unitList.push({ps:[],kids:g,virtual:true});
+  });
+  const kidSet=new Set();unitList.forEach(u=>u.kids.forEach(k=>kidSet.add(k)));
   const unitsByParent={};
   unitList.forEach(u=>u.ps.forEach(p=>(unitsByParent[p]??=[]).push(u)));
 
@@ -352,7 +370,7 @@ function layout(S){
       u.kids.forEach(k=>{if(cOf[k].gen!==m){cOf[k].gen=m;ch=true;}});});
   }
   clusters.forEach(c=>{
-    if(c.members.some(m=>parentsOf(P[m]).length))return;
+    if(c.members.some(m=>kidSet.has(m)))return;
     let mg=Infinity;
     c.members.forEach(m=>(unitsByParent[m]||[]).forEach(u=>u.kids.forEach(k=>{mg=Math.min(mg,cOf[k].gen);})));
     if(mg<Infinity&&mg-1>c.gen)c.gen=mg-1;
@@ -366,7 +384,7 @@ function layout(S){
   (function(){
     const visit=c=>{if(placed.has(c))return;placed.add(c);rows[c.row].push(c);
       c.members.forEach(m=>(unitsByParent[m]||[]).forEach(u=>u.kids.forEach(k=>visit(cOf[k]))));};
-    clusters.filter(c=>!c.members.some(m=>parentsOf(P[m]).length)).forEach(visit);
+    clusters.filter(c=>!c.members.some(m=>kidSet.has(m))).forEach(visit);
     clusters.forEach(visit);
   })();
   rows.forEach(list=>{let x=0;list.forEach(c=>{c.x=x;x+=c.w+G;});});
@@ -375,12 +393,20 @@ function layout(S){
   const LK=clusters.map(()=>[]);
   const mo=(c,ids)=>ids.reduce((t,m)=>t+c.offs[c.members.indexOf(m)]+W/2,0)/ids.length;
   unitList.forEach(u=>{
+    if(!u.ps.length){
+      for(let i=0;i+1<u.kids.length;i++){const a=u.kids[i],b=u.kids[i+1],ca=cOf[a],cb=cOf[b];
+        if(ca!==cb){LK[ca.id].push({o:cb,sm:[a],om:[b]});LK[cb.id].push({o:ca,sm:[b],om:[a]});}}
+      return;
+    }
     const pc=cOf[u.ps[0]];
     u.pc=pc;
     u.kids.forEach(k=>{const cc=cOf[k];if(cc===pc)return;
       LK[pc.id].push({o:cc,sm:u.ps,om:[k]});
       LK[cc.id].push({o:pc,sm:[k],om:u.ps});});
   });
+  kinList.filter(k=>k.type!=='sibling').forEach(k=>{
+    const ca=cOf[k.a],cb=cOf[k.b];
+    if(ca!==cb&&ca.row===cb.row){LK[ca.id].push({o:cb,sm:[k.a],om:[k.b]});LK[cb.id].push({o:ca,sm:[k.b],om:[k.a]});}});
   const desired=c=>{const L=LK[c.id];if(!L.length)return {d:c.x,wt:.2};
     let t=0;L.forEach(l=>t+=l.o.x+mo(l.o,l.om)-mo(c,l.sm));return {d:t/L.length,wt:L.length};};
   function place(list,ds){
@@ -410,7 +436,7 @@ function layout(S){
   function orient(list){
     list.forEach(c=>{
       if(c.members.length!==2)return;
-      const blood=c.members.filter(m=>parentsOf(P[m]).length);
+      const blood=c.members.filter(m=>kidSet.has(m));
       if(blood.length!==1)return;
       const B=blood[0],X=c.members.find(m=>m!==B);
       const u=unitList.find(u=>u.kids.includes(B));
@@ -421,13 +447,23 @@ function layout(S){
       if(want[0]!==c.members[0])c.members=want;
     });
   }
+  function contig(list){
+    unitList.forEach(u=>{
+      if(!u.virtual)return;
+      const cs=[];u.kids.forEach(k=>{const c=cOf[k];if(list.includes(c)&&!cs.includes(c))cs.push(c);});
+      if(cs.length<2)return;
+      const at=Math.min(...cs.map(c=>list.indexOf(c)));
+      cs.forEach(c=>list.splice(list.indexOf(c),1));
+      list.splice(at,0,...cs);
+    });
+  }
   const ITER=90;
   for(let it=0;it<ITER;it++){
     const order=[...Array(R).keys()];if(it%2)order.reverse();
     for(const r of order){
       const list=rows[r],ds=new Map();
       list.forEach(c=>ds.set(c,desired(c)));
-      if(it>=10&&it<ITER*.65){list.sort((a,b)=>ds.get(a).d-ds.get(b).d);fixSib(list);orient(list);list.forEach(c=>ds.set(c,desired(c)));}
+      if(it>=10&&it<ITER*.65){list.sort((a,b)=>ds.get(a).d-ds.get(b).d);fixSib(list);contig(list);orient(list);list.forEach(c=>ds.set(c,desired(c)));}
       place(list,ds);
     }
   }
@@ -442,7 +478,7 @@ function layout(S){
   clusters.forEach(c=>c.members.forEach((m,i)=>{
     cards[m]={p:P[m],x:c.x+c.offs[i],y:rowTop[c.row],w:W,h:rowH[c.row],info:info[m]};}));
   const right=Math.max(...clusters.map(c=>c.x+c.w));
-  return {W,fam,fs,cards,rels,units:unitList,cOf,right,bottom:y-+st.vGap};
+  return {W,fam,fs,cards,rels,units:unitList,kin:kinList,cOf,right,bottom:y-+st.vGap};
 }
 
 /* ───────── SVG 생성 ───────── */
@@ -465,10 +501,18 @@ function buildSVG(opt={}){
   const st=state.style,W=L.W,lw=+st.lw,fs=L.fs,M=48;
   const goth=st.theme==='gothic',TX=TXT[goth?'gothic':'classic'];
   const title=(st.title||'').trim();
-  const top=M+(title?58:0);
+  const top=M+(title?58:0)+(L.units.some(u=>u.virtual&&u.kids.some(k=>L.cards[k]&&L.cards[k].y===0))?34:0);
+  const arcs=[],seenK=new Set();
+  (L.kin||[]).filter(k=>k.type!=='sibling').forEach(k=>{
+    const key=k.a<k.b?k.a+'|'+k.b:k.b+'|'+k.a;if(seenK.has(key))return;seenK.add(key);
+    const A=L.cards[k.a],B=L.cards[k.b];if(A&&B)arcs.push({k,A,B,d:0});});
+  const rowArcs={};arcs.forEach(a=>{if(a.A.y===a.B.y)(rowArcs[a.A.y]??=[]).push(a);});
+  Object.values(rowArcs).forEach(g=>{g.sort((p,q)=>Math.abs(p.A.x-p.B.x)-Math.abs(q.A.x-q.B.x));g.forEach((a,i)=>a.d=26+i*17);});
+  const lastY=Math.max(...Object.values(L.cards).map(c=>c.y));
+  const kinExtra=Math.max(0,...arcs.filter(a=>a.A.y===a.B.y&&a.A.y===lastY).map(a=>a.d+26-22));
   const tFS=(goth?28:26)*fs, tW=title?measure(title,tFS,700,L.fam)+(goth?title.length*3+240:0):0;
   const baseW=Math.ceil(L.right+M*2), width=Math.max(baseW,Math.ceil(tW+M*2)), dx=(width-baseW)/2;
-  const height=Math.ceil(top+L.bottom+M+22);
+  const height=Math.ceil(top+L.bottom+M+22+kinExtra);
   let ow=width,oh=height,sc=1;
   if(opt.scale){
     sc=Math.min(opt.scale,16000/width,16000/height,Math.sqrt(120e6/(width*height)));
@@ -521,6 +565,12 @@ function buildSVG(opt={}){
   /* 부모→자녀선 */
   const ud=[];
   L.units.forEach(u=>{
+    if(!u.ps.length){
+      const ks=u.kids.map(k=>L.cards[k]).filter(Boolean).map(c=>({x:c.x+W/2,top:c.y}));
+      if(ks.length<2)return;
+      ud.push({virtual:true,kids:ks,minTop:Math.min(...ks.map(k=>k.top)),x0:Math.min(...ks.map(k=>k.x)),x1:Math.max(...ks.map(k=>k.x))});
+      return;
+    }
     const A=L.cards[u.ps[0]];let ax,ay,dot=false;
     if(u.ps.length===2){
       const B=L.cards[u.ps[1]];
@@ -540,6 +590,12 @@ function buildSVG(opt={}){
   });
   let cl='',dots='';
   ud.forEach(u=>{
+    if(u.virtual){
+      const vb=u.minTop-28-u.level*12;
+      cl+=`M${num(u.x0)} ${num(vb)}H${num(u.x1)}`;
+      u.kids.forEach(k=>{cl+=`M${num(k.x)} ${num(vb)}V${num(k.top)}`;});
+      return;
+    }
     let by=u.minTop-28-u.level*12;
     if(by<u.ay+10)by=(u.ay+u.minTop)/2;
     if(u.kids.length===1&&Math.abs(u.kids[0].x-u.ax)<.5){
@@ -552,6 +608,23 @@ function buildSVG(opt={}){
   });
   if(cl)s+=`<path d="${cl}" stroke="${st.cChild}" stroke-width="${lw}"/>`;
   s+=dots;
+
+  /* 가족관계 점선(사촌·기타) */
+  arcs.forEach(({k,A,B,d})=>{
+    const lab=k.label||(k.type==='cousin'?'사촌':''),dash=`stroke-dasharray="${num(lw*.6)} ${num(lw*2.6)}"`;
+    let path,lx,ly;
+    if(A.y===B.y){
+      const x1=A.x+W/2,x2=B.x+W/2,yb=A.y+A.h,kk=d*1.33;
+      path=`M${num(x1)} ${num(yb)}C${num(x1)} ${num(yb+kk)} ${num(x2)} ${num(yb+kk)} ${num(x2)} ${num(yb)}`;
+      lx=(x1+x2)/2;ly=yb+d+14;
+    }else{
+      const [t,b]=A.y<B.y?[A,B]:[B,A],sx=t.x+W/2,sy=t.y+t.h,ex=b.x+W/2,ey=b.y,my=(sy+ey)/2;
+      path=`M${num(sx)} ${num(sy)}C${num(sx)} ${num(my)} ${num(ex)} ${num(my)} ${num(ex)} ${num(ey)}`;
+      lx=(sx+ex)/2;ly=my-8;
+    }
+    s+=`<path d="${path}" stroke="${st.cKin}" stroke-width="${num(lw*1.15)}" ${dash}/>`;
+    if(lab)s+=`<text x="${num(lx)}" y="${num(ly)}" text-anchor="middle" font-size="${11*fs}" fill="${st.cKin}" stroke="none">${esc(lab)}</text>`;
+  });
 
   /* 카드 */
   const r=+st.radius;
@@ -657,6 +730,7 @@ function renderEditor(){
   const opts=(v,ex)=>'<option value="">— 없음 —</option>'+state.people.filter(q=>q.id!==ex)
     .map(q=>`<option value="${q.id}"${q.id===v?' selected':''}>${esc(nameOf(q))}</option>`).join('');
   const rels=state.couples.filter(c=>c.a===p.id||c.b===p.id);
+  const kins=(state.kin||[]).filter(c=>c.a===p.id||c.b===p.id);
   const tone=(v,label,col)=>`<label><input type="radio" name="tone" data-f="tone" value="${v}"${p.tone===v?' checked':''}><i style="background:${col}"></i><span>${label}</span></label>`;
   el.innerHTML=`
     <div class="sec-h">선택한 인물 편집</div>
@@ -705,12 +779,29 @@ function renderEditor(){
       </div>`;}).join('')||'<div class="muted">등록된 배우자가 없어요.</div>'}
     <button class="btn wide" data-act="addRel">+ 기존 인물과 관계 추가</button>
     <hr>
+    <div class="sec-h">가족관계 <small>부모를 적지 않고 연결</small></div>
+    ${kins.map(c=>{
+      const other=c.a===p.id?c.b:c.a;
+      return `<div class="rel" data-kid="${c.id}">
+        <select data-r="kother">${opts(other,p.id)}</select>
+        <select data-r="ktype">
+          <option value="sibling"${c.type==='sibling'?' selected':''}>형제자매 (나란히 묶음)</option>
+          <option value="cousin"${c.type==='cousin'?' selected':''}>사촌 (점선)</option>
+          <option value="other"${c.type==='other'?' selected':''}>기타 친척 (점선)</option>
+        </select>
+        <button class="btn sm danger" data-act="delKin" title="관계 삭제">✕</button>
+        <input type="text" data-r="klabel" value="${esc(c.label)}" placeholder="선에 표시할 글자 (예: 이모-조카, 비워도 돼요)">
+      </div>`;}).join('')||'<div class="muted">등록된 가족관계가 없어요.</div>'}
+    <button class="btn wide" data-act="addKin">+ 가족관계 추가</button>
+    <div class="muted" style="margin-top:6px">형제자매는 같은 줄에 묶여 표시되고, 사촌·기타 친척은 점선으로 이어져요.</div>
+    <hr>
     <button class="btn danger wide" data-act="del">이 인물 삭제</button>`;
 }
 const ed=$('#editor');
 ed.addEventListener('input',e=>{
   const t=e.target,p=cur();if(!p)return;
   if(t.dataset.f&&(t.type==='text'||t.tagName==='TEXTAREA')){p[t.dataset.f]=t.value;changed(false);}
+  else if(t.dataset.r==='klabel'){const c=state.kin.find(c=>c.id===t.closest('.rel').dataset.kid);if(c){c.label=t.value;changed(false);}}
   else if(t.dataset.r==='label'){const c=state.couples.find(c=>c.id===t.closest('.rel').dataset.rid);if(c){c.label=t.value;changed(false);}}
   else if(t.id==='colorIn'){p.color=t.value;p.tone='c';changed(false);
     const r=ed.querySelector('input[name=tone][value=c]');if(r)r.checked=true;}
@@ -726,6 +817,12 @@ ed.addEventListener('change',async e=>{
     if(p.p1&&p.p2&&p.p1===p.p2)p[t.dataset.f]='';
     if(p.p1&&p.p2&&!hasRel(p.p1,p.p2))state.couples.push({id:uid(),a:p.p1,b:p.p2,type:'married',label:''});
     changed(true);
+  }
+  else if(t.dataset.r==='kother'||t.dataset.r==='ktype'){
+    const c=state.kin.find(c=>c.id===t.closest('.rel').dataset.kid);if(!c)return;
+    if(t.dataset.r==='ktype')c.type=t.value;
+    else if(c.a===p.id)c.b=t.value;else c.a=t.value;
+    changed(false);
   }
   else if(t.dataset.r==='other'||t.dataset.r==='type'){
     const c=state.couples.find(c=>c.id===t.closest('.rel').dataset.rid);if(!c)return;
@@ -757,20 +854,24 @@ ed.addEventListener('click',e=>{
     if(!p.p1)p.p1=n.id;else p.p2=n.id;
     if(p.p1&&p.p2&&!hasRel(p.p1,p.p2))state.couples.push({id:uid(),a:p.p1,b:p.p2,type:'married',label:''});
   }else if(act==='addSibling'){
-    addPerson({name:'형제자매',p1:p.p1,p2:p.p2});
+    const sb=addPerson({name:'형제자매',p1:p.p1,p2:p.p2});
+    if(!p.p1&&!p.p2)state.kin.push({id:uid(),a:p.id,b:sb.id,type:'sibling',label:''});
   }else if(act==='rmPhoto'){p.photo='';}
   else if(act==='addRel'){state.couples.push({id:uid(),a:p.id,b:'',type:'married',label:''});}
+  else if(act==='addKin'){state.kin.push({id:uid(),a:p.id,b:'',type:'sibling',label:''});}
+  else if(act==='delKin'){const id=b.closest('.rel').dataset.kid;state.kin=state.kin.filter(c=>c.id!==id);}
   else if(act==='delRel'){const id=b.closest('.rel').dataset.rid;state.couples=state.couples.filter(c=>c.id!==id);}
   else if(act==='del'){
     if(!confirm(`“${p.name||'(이름 없음)'}” 인물을 삭제할까요?`))return;
     const i=state.people.indexOf(p);
     state.people.splice(i,1);
     state.couples=state.couples.filter(c=>c.a!==p.id&&c.b!==p.id);
+    state.kin=state.kin.filter(c=>c.a!==p.id&&c.b!==p.id);
     state.people.forEach(q=>{if(q.p1===p.id)q.p1='';if(q.p2===p.id)q.p2='';});
     sel=state.people[Math.min(i,state.people.length-1)]?.id||null;
   }
   save();renderList();renderEditor();renderPreview();
-  if(act.startsWith('add')&&act!=='addRel'){const n=$('[data-f=name]',ed);if(n){n.focus();n.select();}}
+  if(act.startsWith('add')&&act!=='addRel'&&act!=='addKin'){const n=$('[data-f=name]',ed);if(n){n.focus();n.select();}}
 });
 $('#btnAdd').onclick=()=>{addPerson({name:'새 인물'});save();renderList();renderEditor();renderPreview();const n=$('[data-f=name]',ed);if(n){n.focus();n.select();}};
 
@@ -801,6 +902,7 @@ const STYLE_UI=[
   {k:'cDivorce',t:'color',l:'이혼선 색'},
   {k:'cPartner',t:'color',l:'연인·동거선 색'},
   {k:'cChild',t:'color',l:'부모-자녀선 색'},
+  {k:'cKin',t:'color',l:'친척(점선)선 색'},
   {k:'font',t:'font',l:'글꼴'},
   {k:'bg',t:'color',l:'배경색'},
   {k:'transparent',t:'check',l:'PNG 배경 투명'}
@@ -877,7 +979,7 @@ $('#fileJson').onchange=e=>{
   fr.readAsText(f);e.target.value='';
 };
 $('#btnDemo').onclick=()=>{if(confirm('현재 내용이 예시로 바뀌어요. 계속할까요?')){state=demo();sel=null;firstFit=true;renderAll();save();}};
-$('#btnClear').onclick=()=>{if(confirm('모든 내용을 지우고 새로 시작할까요? (되돌릴 수 없어요)')){state={people:[],couples:[],style:{...DEF_STYLE}};sel=null;renderAll();save();}};
+$('#btnClear').onclick=()=>{if(confirm('모든 내용을 지우고 새로 시작할까요? (되돌릴 수 없어요)')){state={people:[],couples:[],kin:[],style:{...DEF_STYLE}};sel=null;renderAll();save();}};
 
 function applyTheme(){
   const g=state.style.theme==='gothic';
