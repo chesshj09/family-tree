@@ -147,8 +147,10 @@ body.goth .srow input[type=range]{accent-color:#b8324e}
         · 부부 관계는 <b>결혼(이중선) · 이혼(회색 이중선+사선) · 연인/동거(점선)</b>으로 구분돼요. 관계 옆에 결혼일 같은 글자도 적을 수 있어요.<br>
         · 부모를 둘 다 지정했는데 부부 관계가 없으면 점선(연인/동거)으로 자동 연결돼요.<br>
         · 재혼·여러 번 결혼도 배우자를 여러 명 추가하면 돼요.<br>
+        · 배우자가 왼쪽/오른쪽 어디에 오는지는 기본적으로 자동이고, 마음에 안 들면 인물 편집의 <b>배우자 기준 이 사람의 위치</b>에서 직접 고를 수 있어요.<br>
         · 부모를 적고 싶지 않으면 <b>가족관계</b> 칸에서 형제자매(한 줄로 묶임)·사촌·기타 친척(점선)으로 이어 주세요. 부모가 없는 인물에 <b>+ 형제자매</b>를 누르면 자동으로 이렇게 이어져요.<br>
         · 왼→오 순서가 마음에 안 들면 인물 목록의 ▲▼로 순서를 바꿔 주세요. (형제는 목록 순서대로 왼쪽부터, 부부는 먼저 있는 사람이 왼쪽)<br>
+        · 가족 위치가 마음에 안 들면 인물 편집의 <b>같은 줄에서 위치 이동</b>으로 그 사람(과 배우자)을 한 칸씩 옮길 수 있어요.<br>
         · 오른쪽 그림에서 카드를 클릭하면 바로 그 인물을 편집할 수 있어요.<br>
         · 사진은 가운데를 기준으로 정사각형으로 잘려 동그랗게 들어가요.<br>
         · <b>Ctrl(⌘)+마우스 휠</b>로 화면 확대/축소. PNG는 화면 배율과 상관없이 위에서 고른 해상도로 저장돼요.<br>
@@ -196,7 +198,7 @@ const THEME_PRESET={
   gothic:{cMarry:'#c0334d',cDivorce:'#8f8590',cPartner:'#9a7bd0',cChild:'#8e7a5a',cKin:'#7f9aa3',bg:GOTH_BG,font:'serif',radius:6}};
 let state, sel=null, zoom=1, lastW=1, lastH=1, firstFit=true;
 
-const newPerson=(o={})=>({id:uid(),name:'',sub:'',memo:'',photo:'',tone:'x',color:'#4aa37a',hi:false,p1:'',p2:'',...o});
+const newPerson=(o={})=>({id:uid(),name:'',sub:'',memo:'',photo:'',tone:'x',color:'#4aa37a',hi:false,side:'',nudge:0,p1:'',p2:'',...o});
 function norm(j){
   return {
     people:(j.people||[]).map(p=>({...newPerson(),...p,id:p.id||uid()})),
@@ -311,7 +313,10 @@ function layout(S){
     const h=Math.floor(nb.length/2);
     const used=new Set([center,...nb]);
     const rest=ids.filter(i=>!used.has(i)).sort((a,b)=>idx[a]-idx[b]);
-    return [...nb.slice(0,h),center,...nb.slice(h),...rest];
+    const Ls=nb.filter(m=>P[m].side==='L'),Rs=nb.filter(m=>P[m].side==='R');
+    nb.filter(m=>!P[m].side).forEach(m=>{if(Ls.length<h)Ls.push(m);else Rs.push(m);});
+    const byI=(a,b)=>idx[a]-idx[b];
+    return [...Ls.sort(byI),center,...Rs.sort(byI),...rest];
   }
   const clusters=[],cOf={};
   Object.values(groups)
@@ -436,6 +441,15 @@ function layout(S){
   function orient(list){
     list.forEach(c=>{
       if(c.members.length!==2)return;
+      /* 직접 지정한 위치가 있으면 우선 (부모 없는 쪽 먼저 확인) */
+      const ord=c.members.slice().sort((a,b)=>kidSet.has(a)-kidSet.has(b));
+      for(const m of ord){
+        const sd=P[m].side;if(!sd)continue;
+        const o=c.members.find(x=>x!==m);
+        const w=sd==='L'?[m,o]:[o,m];
+        if(w[0]!==c.members[0])c.members=w;
+        return;
+      }
       const blood=c.members.filter(m=>kidSet.has(m));
       if(blood.length!==1)return;
       const B=blood[0],X=c.members.find(m=>m!==B);
@@ -457,13 +471,22 @@ function layout(S){
       list.splice(at,0,...cs);
     });
   }
-  const ITER=90;
+  function applyNudge(list){
+    list.slice().forEach(c=>{
+      const k=c.members.reduce((t,m)=>t+(+P[m].nudge||0),0);
+      if(!k)return;
+      const i=list.indexOf(c),j=Math.max(0,Math.min(list.length-1,i+k));
+      list.splice(i,1);list.splice(j,0,c);
+    });
+  }
+  const ITER=90,FZ=Math.ceil(ITER*.65);
   for(let it=0;it<ITER;it++){
     const order=[...Array(R).keys()];if(it%2)order.reverse();
     for(const r of order){
       const list=rows[r],ds=new Map();
       list.forEach(c=>ds.set(c,desired(c)));
       if(it>=10&&it<ITER*.65){list.sort((a,b)=>ds.get(a).d-ds.get(b).d);fixSib(list);contig(list);orient(list);list.forEach(c=>ds.set(c,desired(c)));}
+      if(it===FZ){applyNudge(list);list.forEach(c=>ds.set(c,desired(c)));}
       place(list,ds);
     }
   }
@@ -757,6 +780,14 @@ function renderEditor(){
       </div>
     </div>
     <label class="chk-line"><input type="checkbox" data-f="hi"${p.hi?' checked':''}>이 카드 강조하기 (테두리 굵게)</label>
+    <div class="f" style="margin-top:12px">같은 줄에서 위치 이동 <span style="font-size:11.5px">(배우자와 한 묶음으로 움직여요)</span>
+      <div class="quick" style="margin-top:6px;align-items:center">
+        <button class="btn sm" data-act="nudgeL">◀ 왼쪽으로 한 칸</button>
+        <button class="btn sm" data-act="nudgeR">오른쪽으로 한 칸 ▶</button>
+        <button class="btn sm" data-act="nudge0">자동</button>
+        <span style="color:var(--tx);font-size:12.5px">${(+p.nudge||0)===0?'자동':`${p.nudge<0?'왼쪽':'오른쪽'} ${Math.abs(p.nudge)}칸`}</span>
+      </div>
+    </div>
     <hr>
     <div class="sec-h">부모 <small>한 명만 골라도 돼요</small></div>
     <div class="row2">
@@ -765,6 +796,8 @@ function renderEditor(){
     </div>
     <hr>
     <div class="sec-h">배우자 / 파트너</div>
+    ${rels.length?`<label class="f">배우자 기준 이 사람의 위치
+      <select data-f="side"><option value="">자동 (기본)</option><option value="L"${p.side==='L'?' selected':''}>배우자의 왼쪽</option><option value="R"${p.side==='R'?' selected':''}>배우자의 오른쪽</option></select></label>`:''}
     ${rels.map(c=>{
       const other=c.a===p.id?c.b:c.a;
       return `<div class="rel" data-rid="${c.id}">
@@ -812,6 +845,7 @@ ed.addEventListener('change',async e=>{
     try{p.photo=await readPhoto(t.files[0]);changed(true);}catch(err){toast('사진을 읽지 못했어요.');}
   }else if(t.dataset.f==='tone'){p.tone=t.value;changed(false);}
   else if(t.dataset.f==='hi'){p.hi=t.checked;changed(false);}
+  else if(t.dataset.f==='side'){p.side=t.value;changed(false);}
   else if(t.dataset.f==='p1'||t.dataset.f==='p2'){
     p[t.dataset.f]=t.value;
     if(p.p1&&p.p2&&p.p1===p.p2)p[t.dataset.f]='';
@@ -857,6 +891,9 @@ ed.addEventListener('click',e=>{
     const sb=addPerson({name:'형제자매',p1:p.p1,p2:p.p2});
     if(!p.p1&&!p.p2)state.kin.push({id:uid(),a:p.id,b:sb.id,type:'sibling',label:''});
   }else if(act==='rmPhoto'){p.photo='';}
+  else if(act==='nudgeL'){p.nudge=(+p.nudge||0)-1;}
+  else if(act==='nudgeR'){p.nudge=(+p.nudge||0)+1;}
+  else if(act==='nudge0'){p.nudge=0;}
   else if(act==='addRel'){state.couples.push({id:uid(),a:p.id,b:'',type:'married',label:''});}
   else if(act==='addKin'){state.kin.push({id:uid(),a:p.id,b:'',type:'sibling',label:''});}
   else if(act==='delKin'){const id=b.closest('.rel').dataset.kid;state.kin=state.kin.filter(c=>c.id!==id);}
