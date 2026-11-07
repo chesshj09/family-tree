@@ -371,20 +371,18 @@ function layout(S){
   })();
   rows.forEach(list=>{let x=0;list.forEach(c=>{c.x=x;x+=c.w+G;});});
 
-  /* 링크(부모 앵커 ↔ 자녀) */
-  const links=[],LK=clusters.map(()=>[]);
+  /* 링크(부모 앵커 ↔ 자녀) — 부부 좌우가 바뀌어도 되도록 멤버 id로 보관 */
+  const LK=clusters.map(()=>[]);
+  const mo=(c,ids)=>ids.reduce((t,m)=>t+c.offs[c.members.indexOf(m)]+W/2,0)/ids.length;
   unitList.forEach(u=>{
     const pc=cOf[u.ps[0]];
-    const o0=pc.offs[pc.members.indexOf(u.ps[0])];
-    const aoff=u.ps.length===2?(o0+pc.offs[pc.members.indexOf(u.ps[1])]+W)/2:o0+W/2;
-    u.pc=pc;u.aoff=aoff;
+    u.pc=pc;
     u.kids.forEach(k=>{const cc=cOf[k];if(cc===pc)return;
-      const cOff=cc.offs[cc.members.indexOf(k)]+W/2;
-      LK[pc.id].push({o:cc,self:aoff,other:cOff});
-      LK[cc.id].push({o:pc,self:cOff,other:aoff});});
+      LK[pc.id].push({o:cc,sm:u.ps,om:[k]});
+      LK[cc.id].push({o:pc,sm:[k],om:u.ps});});
   });
   const desired=c=>{const L=LK[c.id];if(!L.length)return {d:c.x,wt:.2};
-    let s=0;L.forEach(l=>s+=l.o.x+l.other-l.self);return {d:s/L.length,wt:L.length};};
+    let t=0;L.forEach(l=>t+=l.o.x+mo(l.o,l.om)-mo(c,l.sm));return {d:t/L.length,wt:L.length};};
   function place(list,ds){
     let s=0;const t=[],wt=[],so=[];
     list.forEach(c=>{so.push(s);const e=ds.get(c);t.push(e.d-s);wt.push(e.wt);s+=c.w+G;});
@@ -408,13 +406,28 @@ function layout(S){
       cs.forEach((c,i)=>{list[slots[i]]=c;});
     });
   }
+  /* 배우자(부모가 없는 쪽)는 형제들 바깥쪽에 배치: 맨 왼쪽 형제→왼쪽, 그 외→오른쪽 */
+  function orient(list){
+    list.forEach(c=>{
+      if(c.members.length!==2)return;
+      const blood=c.members.filter(m=>parentsOf(P[m]).length);
+      if(blood.length!==1)return;
+      const B=blood[0],X=c.members.find(m=>m!==B);
+      const u=unitList.find(u=>u.kids.includes(B));
+      const sibs=u?u.kids.filter(k=>k!==B).map(k=>cOf[k]).filter(cc=>cc!==c&&list.includes(cc)):[];
+      if(!sibs.length)return;
+      const pos=list.indexOf(c),left=sibs.every(cc=>list.indexOf(cc)>pos);
+      const want=left?[X,B]:[B,X];
+      if(want[0]!==c.members[0])c.members=want;
+    });
+  }
   const ITER=90;
   for(let it=0;it<ITER;it++){
     const order=[...Array(R).keys()];if(it%2)order.reverse();
     for(const r of order){
       const list=rows[r],ds=new Map();
       list.forEach(c=>ds.set(c,desired(c)));
-      if(it>=10&&it<ITER*.65){list.sort((a,b)=>ds.get(a).d-ds.get(b).d);fixSib(list);}
+      if(it>=10&&it<ITER*.65){list.sort((a,b)=>ds.get(a).d-ds.get(b).d);fixSib(list);orient(list);list.forEach(c=>ds.set(c,desired(c)));}
       place(list,ds);
     }
   }
