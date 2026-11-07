@@ -151,6 +151,7 @@ body.goth .srow input[type=range]{accent-color:#b8324e}
         · 부모를 적고 싶지 않으면 <b>가족관계</b> 칸에서 형제자매(한 줄로 묶임)·사촌·기타 친척(점선)으로 이어 주세요. 부모가 없는 인물에 <b>+ 형제자매</b>를 누르면 자동으로 이렇게 이어져요.<br>
         · 왼→오 순서가 마음에 안 들면 인물 목록의 ▲▼로 순서를 바꿔 주세요. (형제는 목록 순서대로 왼쪽부터, 부부는 먼저 있는 사람이 왼쪽)<br>
         · 가족 위치가 마음에 안 들면 인물 편집의 <b>같은 줄에서 위치 이동</b>으로 그 사람(과 배우자)을 한 칸씩 옮길 수 있어요.<br>
+        · 항렬이 안 맞아 보이면 <b>세대(줄) 이동</b>으로 그 사람(과 배우자)만 한 줄 위·아래로 옮길 수 있어요. (자녀는 그대로 있어요)<br>
         · 오른쪽 그림에서 카드를 클릭하면 바로 그 인물을 편집할 수 있어요.<br>
         · 사진은 가운데를 기준으로 정사각형으로 잘려 동그랗게 들어가요.<br>
         · <b>Ctrl(⌘)+마우스 휠</b>로 화면 확대/축소. PNG는 화면 배율과 상관없이 위에서 고른 해상도로 저장돼요.<br>
@@ -198,7 +199,7 @@ const THEME_PRESET={
   gothic:{cMarry:'#c0334d',cDivorce:'#8f8590',cPartner:'#9a7bd0',cChild:'#8e7a5a',cKin:'#7f9aa3',bg:GOTH_BG,font:'serif',radius:6}};
 let state, sel=null, zoom=1, lastW=1, lastH=1, firstFit=true;
 
-const newPerson=(o={})=>({id:uid(),name:'',sub:'',memo:'',photo:'',tone:'x',color:'#4aa37a',hi:false,side:'',nudge:0,p1:'',p2:'',...o});
+const newPerson=(o={})=>({id:uid(),name:'',sub:'',memo:'',photo:'',tone:'x',color:'#4aa37a',hi:false,side:'',nudge:0,rowShift:0,p1:'',p2:'',...o});
 function norm(j){
   return {
     people:(j.people||[]).map(p=>({...newPerson(),...p,id:p.id||uid()})),
@@ -380,6 +381,8 @@ function layout(S){
     c.members.forEach(m=>(unitsByParent[m]||[]).forEach(u=>u.kids.forEach(k=>{mg=Math.min(mg,cOf[k].gen);})));
     if(mg<Infinity&&mg-1>c.gen)c.gen=mg-1;
   });
+  /* 직접 지정한 세대(줄) 이동 */
+  clusters.forEach(c=>{c.gen+=c.members.reduce((t,m)=>t+(+P[m].rowShift||0),0);});
   const gens=[...new Set(clusters.map(c=>c.gen))].sort((a,b)=>a-b);
   clusters.forEach(c=>c.row=gens.indexOf(c.gen));
   const R=gens.length,rows=Array.from({length:R},()=>[]);
@@ -788,6 +791,14 @@ function renderEditor(){
         <span style="color:var(--tx);font-size:12.5px">${(+p.nudge||0)===0?'자동':`${p.nudge<0?'왼쪽':'오른쪽'} ${Math.abs(p.nudge)}칸`}</span>
       </div>
     </div>
+    <div class="f" style="margin-top:12px">세대(줄) 이동 <span style="font-size:11.5px">(항렬을 맞출 때 · 배우자와 같이 움직여요)</span>
+      <div class="quick" style="margin-top:6px;align-items:center">
+        <button class="btn sm" data-act="rowUp">▲ 위로 한 칸</button>
+        <button class="btn sm" data-act="rowDown">아래로 한 칸 ▼</button>
+        <button class="btn sm" data-act="row0">자동</button>
+        <span style="color:var(--tx);font-size:12.5px">${(+p.rowShift||0)===0?'자동':`${p.rowShift<0?'위':'아래'} ${Math.abs(p.rowShift)}칸`}</span>
+      </div>
+    </div>
     <hr>
     <div class="sec-h">부모 <small>한 명만 골라도 돼요</small></div>
     <div class="row2">
@@ -894,6 +905,9 @@ ed.addEventListener('click',e=>{
   else if(act==='nudgeL'){p.nudge=(+p.nudge||0)-1;}
   else if(act==='nudgeR'){p.nudge=(+p.nudge||0)+1;}
   else if(act==='nudge0'){p.nudge=0;}
+  else if(act==='rowUp'){p.rowShift=(+p.rowShift||0)-1;}
+  else if(act==='rowDown'){p.rowShift=(+p.rowShift||0)+1;}
+  else if(act==='row0'){p.rowShift=0;}
   else if(act==='addRel'){state.couples.push({id:uid(),a:p.id,b:'',type:'married',label:''});}
   else if(act==='addKin'){state.kin.push({id:uid(),a:p.id,b:'',type:'sibling',label:''});}
   else if(act==='delKin'){const id=b.closest('.rel').dataset.kid;state.kin=state.kin.filter(c=>c.id!==id);}
